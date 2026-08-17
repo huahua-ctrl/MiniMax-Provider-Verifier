@@ -2422,6 +2422,154 @@ class TestToolCallEdge:
             msg=f"tool_name_special_chars stream={stream}",
         )
 
+    def test_16_11b_tool_param_names_hyphen_flags(self):
+        """Tool parameter names use hyphen/short-flag style (-B/-A/-C/-n/-i).
+
+        Verifies the provider does NOT over-validate tool parameter names: a
+        schema whose `properties` keys are not conventional identifiers (leading
+        hyphen, single letter) must be accepted and passed through as-is. Common
+        over-validation failure modes this guards against:
+          - the endpoint rejects the request (4xx) merely because a property key
+            like `-i` / `-n` does not match some "valid parameter name" rule;
+          - the endpoint silently drops / renames such keys before handing the
+            schema to the model, so the tool becomes uncallable.
+
+        Assertions:
+          1. HTTP 200 — the hyphen-named schema is accepted, not 4xx-rejected
+             for having non-conventional parameter names.
+          2. The tool remains callable with valid-JSON arguments satisfying the
+             schema (the hyphen-named keys were passed through, not dropped).
+          3. The returned tool call carries `-n`=True and `-i`=True, matching the
+             prompt ("line numbers" + "ignore case"), confirming the hyphen-named
+             flags survived the round-trip and stayed usable by the model.
+
+        The request body (messages + tools schema) is a verbatim reproduction of
+        a real Claude Code `Grep` tool definition. `model` / `max_tokens` /
+        `stream` are intentionally omitted so the M3 harness injects them
+        (model via --model, max_tokens forced by the M3 guard, stream=True here).
+        """
+        grep_tool = {
+            "type": "function",
+            "function": {
+                "description": "A powerful search tool built on ripgrep\n\n  Usage:\n  - ALWAYS use Grep for search tasks. NEVER invoke `grep` or `rg` as a Bash command. The Grep tool has been optimized for correct permissions and access.\n  - Supports full regex syntax (e.g., \"log.*Error\", \"function\\s+\\w+\")\n  - Filter files with glob parameter (e.g., \"*.js\", \"**/*.tsx\") or type parameter (e.g., \"js\", \"py\", \"rust\")\n  - Output modes: \"content\" shows matching lines, \"files_with_matches\" shows only file paths (default), \"count\" shows match counts\n  - Use Task tool for open-ended searches requiring multiple rounds\n  - Pattern syntax: Uses ripgrep (not grep) - literal braces need escaping (use `interface\\{\\}` to find `interface{}` in Go code)\n  - Multiline matching: By default patterns match within single lines only. For cross-line patterns like `struct \\{[\\s\\S]*?field`, use `multiline: true`\n",
+                "name": "Grep",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "pattern": {
+                            "type": "string",
+                            "description": "The regular expression pattern to search for in file contents"
+                        },
+                        "path": {
+                            "type": "string",
+                            "description": "File or directory to search in (rg PATH). Defaults to current working directory."
+                        },
+                        "glob": {
+                            "type": "string",
+                            "description": "Glob pattern to filter files (e.g. \"*.js\", \"*.{ts,tsx}\") - maps to rg --glob"
+                        },
+                        "output_mode": {
+                            "type": "string",
+                            "enum": [
+                                "content",
+                                "files_with_matches",
+                                "count"
+                            ],
+                            "description": "Output mode: \"content\" shows matching lines (supports -A/-B/-C context, -n line numbers, head_limit), \"files_with_matches\" shows file paths (supports head_limit), \"count\" shows match counts (supports head_limit). Defaults to \"files_with_matches\"."
+                        },
+                        "-B": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Number of lines to show before each match (rg -B). Requires output_mode: \"content\", ignored otherwise."
+                        },
+                        "-A": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Number of lines to show after each match (rg -A). Requires output_mode: \"content\", ignored otherwise."
+                        },
+                        "-C": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Number of lines to show before and after each match (rg -C). Requires output_mode: \"content\", ignored otherwise."
+                        },
+                        "-n": {
+                            "type": "boolean",
+                            "description": "Show line numbers in output (rg -n). Requires output_mode: \"content\", ignored otherwise."
+                        },
+                        "-i": {
+                            "type": "boolean",
+                            "description": "Case insensitive search (rg -i)"
+                        },
+                        "type": {
+                            "type": "string",
+                            "description": "File type to search (rg --type). Common types: js, py, rust, go, java, etc. More efficient than include for standard file types."
+                        },
+                        "head_limit": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Limit output to first N lines/entries, equivalent to \"| head -N\". Works across all output modes: content (limits output lines), files_with_matches (limits file paths), count (limits count entries). Defaults to 100."
+                        },
+                        "offset": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Skip first N lines/entries before applying head_limit, equivalent to \"| tail -n +N | head -N\". Works across all output modes. Defaults to 0."
+                        },
+                        "multiline": {
+                            "type": "boolean",
+                            "description": "Enable multiline mode where . matches newlines and patterns can span lines (rg -U --multiline-dotall). Default: false."
+                        }
+                    },
+                    "required": [
+                        "pattern"
+                    ]
+                }
+            }
+        }
+        r = oai_chat({
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "text": "调用 Grep 工具, 检索 `/tmp/sample.txt` 中 `keyword` 字样出现情况, 注意忽略大小写、带上行号.",
+                            "type": "text"
+                        }
+                    ]
+                }
+            ],
+            "tools": [grep_tool],
+        }, stream=True)
+        # (1) The hyphen/short-flag-keyed schema must be ACCEPTED, not 4xx-rejected
+        #     for having non-conventional parameter names.
+        assert r["status"] == 200, (
+            f"tool_param_names_hyphen_flags: schema with hyphen-named params "
+            f"(-B/-A/-C/-n/-i) should be accepted, got HTTP {r['status']}. "
+            f"body={str(r.get('body'))[:300]}"
+        )
+        # (2) The tool must remain callable and produce valid-JSON arguments that
+        #     satisfy the schema (implicitly proving the hyphen-named keys were
+        #     passed through to the model, not dropped/renamed by the provider).
+        assert_tool_called(
+            r,
+            expected_name="Grep",
+            expected_args_subset={"pattern": "keyword"},
+            schema=grep_tool["function"]["parameters"],
+            msg="tool_param_names_hyphen_flags",
+        )
+        # (3) The call must actually carry the hyphen-named flags -n and -i
+        #     (line numbers + ignore case) with value True, as instructed by the
+        #     prompt. This proves the hyphen-named keys survived the round-trip
+        #     and remained usable by the model, not just accepted at request time.
+        args = get_tool_calls(r)[0]["arguments_obj"]
+        assert "-n" in args and args["-n"] is True, (
+            f"tool_param_names_hyphen_flags: expected '-n'=True (show line numbers) "
+            f"in tool call arguments, got keys={list(args.keys())} args={args!r}"
+        )
+        assert "-i" in args and args["-i"] is True, (
+            f"tool_param_names_hyphen_flags: expected '-i'=True (case insensitive) "
+            f"in tool call arguments, got keys={list(args.keys())} args={args!r}"
+        )
+
     @pytest.mark.parametrize("stream", [False, True], ids=["non_stream", "stream"])
     def test_16_12_invalid_json_arguments(self, stream):
         """tool_calls.arguments is invalid JSON → 400."""
