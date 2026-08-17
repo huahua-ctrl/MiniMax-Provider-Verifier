@@ -2,7 +2,7 @@
 
 > 对应文件:`data/m3_api_test/m3_text_tests.py`
 > 命名规范:`test_<模块编号>_<模块内顺序编号>_<场景说明>`
-> 模块数:**20**;case 函数数:**108**;pytest 收集 items 数:**140**
+> 模块数:**20**;case 函数数:**122**;pytest 收集 items 数:**162**
 
 ## 模块总览
 
@@ -209,6 +209,7 @@
 | 16_09 | `test_16_09_partial_tool_call_reply` | 两 tool_calls 只回填一个 | HTTP 400 |
 | 16_10 | `test_16_10_30_tool_definitions` | 30 个 tool definitions | HTTP 200 + 若触发则 args 合法 JSON |
 | 16_11 | `test_16_11_tool_name_special_chars` | tool name 含 - 和 . (my-tool.v2) | 模型应正确调用 |
+| 16_11b | `test_16_11b_tool_param_names_hyphen_flags` | tool 参数名含短横线/短标志 (-B/-A/-C/-n/-i)，参数名不应被过度校验 | HTTP 200 + 触发 Grep + args 合法 JSON + 返回含 -n=True 和 -i=True |
 | 16_12 | `test_16_12_invalid_json_arguments` | tool_calls.arguments 非法 JSON | HTTP 400 |
 | 16_13 | `test_16_13_long_arguments_10k` | 10K 字符的 arguments | HTTP 200 |
 | 16_14 | `test_16_14_tool_choice_nonexistent_tool` | tool_choice 指定不存在的工具 | 200 或 400;模型不应捏造调用 |
@@ -253,7 +254,7 @@
 
 ---
 
-## 附录:parametrize 展开后的 155 个 items
+## 附录:parametrize 展开后的 162 个 items
 
 凡函数签名带 `@pytest.mark.parametrize("stream", [False, True], ids=["non_stream", "stream"])` 的会展开为 2 个 items;`max_tokens` 的两个 case 各展开为 2 个 items。
 
@@ -264,4 +265,4 @@
 | `mt ∈ {512000, 524288}` | 06_09 |
 | `mt ∈ {524289, 1000000}` | 06_10 |
 
-总 items = 116 函数 - 34 (`stream` 双值函数) - 1 (`ctx_tokens × stream` 函数) - 2 (`mt` 双值函数) + 34×2 + 1×4 + 2×2 = **155**。
+总 items = 116 函数 - 34 (`stream` 双值函数) - 1 (`ctx_tokens × stream` 函数) - 2 (`mt` 双值函数) + 34×2 + 1×4 + 2×2 = **155**。（注:此为历史推导，最新以 `pytest --collect-only` 实际收集的 **162** 个 items 为准）

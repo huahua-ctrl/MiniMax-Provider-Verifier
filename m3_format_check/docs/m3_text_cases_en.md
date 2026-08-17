@@ -2,7 +2,7 @@
 
 > Corresponds to: `data/m3_api_test/m3_text_tests.py`
 > Naming convention: `test_<module_id>_<intra_module_seq>_<scene>`
-> Modules: **20**; Test functions: **108**; Pytest collected items: **140**
+> Modules: **20**; Test functions: **122**; Pytest collected items: **162**
 
 ## Module Overview
 
@@ -210,6 +210,7 @@
 | 16_09 | `test_16_09_partial_tool_call_reply` | Reply to only some tool_calls | HTTP 400 |
 | 16_10 | `test_16_10_30_tool_definitions` | 30 tool definitions | HTTP 200 + if triggered, args valid JSON |
 | 16_11 | `test_16_11_tool_name_special_chars` | tool name with - and . (my-tool.v2) | Model calls correctly |
+| 16_11b | `test_16_11b_tool_param_names_hyphen_flags` | tool param names with hyphen/short-flag style (-B/-A/-C/-n/-i); param names must not be over-validated | HTTP 200 + Grep triggered + args valid JSON + returned args carry -n=True and -i=True |
 | 16_12 | `test_16_12_invalid_json_arguments` | tool_calls.arguments invalid JSON | HTTP 400 |
 | 16_13 | `test_16_13_long_arguments_10k` | 10K char arguments | HTTP 200 |
 | 16_14 | `test_16_14_tool_choice_nonexistent_tool` | tool_choice specifies nonexistent tool | 200 or 400; model must not invent call |
@@ -254,7 +255,7 @@
 
 ---
 
-## Appendix: 155 items after parametrize expansion
+## Appendix: 162 items after parametrize expansion
 
 Functions decorated with `@pytest.mark.parametrize("stream", [False, True], ids=["non_stream", "stream"])` expand to 2 items each; the two `max_tokens` parametrized cases each expand to 2 items.
 
@@ -265,4 +266,4 @@ Functions decorated with `@pytest.mark.parametrize("stream", [False, True], ids=
 | `mt ∈ {512000, 524288}` | 06_09 |
 | `mt ∈ {524289, 1000000}` | 06_10 |
 
-Total items = 116 functions - 34 two-value `stream` functions - 1 `ctx_tokens × stream` function - 2 two-value `mt` functions + 34×2 + 1×4 + 2×2 = **155**.
+Total items = 116 functions - 34 two-value `stream` functions - 1 `ctx_tokens × stream` function - 2 two-value `mt` functions + 34×2 + 1×4 + 2×2 = **155**. (Note: this is a historical derivation; the authoritative count is the **162** items actually collected by `pytest --collect-only`.)
