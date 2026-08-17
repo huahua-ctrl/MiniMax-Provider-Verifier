@@ -2434,10 +2434,14 @@ class TestToolCallEdge:
           - the endpoint silently drops / renames such keys before handing the
             schema to the model, so the tool becomes uncallable.
 
-        Scope: this asserts provider PASS-THROUGH of the schema, NOT the model's
-        ability to fill the flags. We therefore do not require the model to emit
-        `-i` / `-n`; we only require the hyphen-named schema to be accepted and
-        the tool to remain callable with valid-JSON arguments.
+        Assertions:
+          1. HTTP 200 — the hyphen-named schema is accepted, not 4xx-rejected
+             for having non-conventional parameter names.
+          2. The tool remains callable with valid-JSON arguments satisfying the
+             schema (the hyphen-named keys were passed through, not dropped).
+          3. The returned tool call carries `-n`=True and `-i`=True, matching the
+             prompt ("line numbers" + "ignore case"), confirming the hyphen-named
+             flags survived the round-trip and stayed usable by the model.
 
         The request body (messages + tools schema) is a verbatim reproduction of
         a real Claude Code `Grep` tool definition. `model` / `max_tokens` /
@@ -2545,14 +2549,25 @@ class TestToolCallEdge:
         # (2) The tool must remain callable and produce valid-JSON arguments that
         #     satisfy the schema (implicitly proving the hyphen-named keys were
         #     passed through to the model, not dropped/renamed by the provider).
-        #     We intentionally do NOT require the model to emit -i / -n: this case
-        #     checks provider pass-through, not model flag-filling behavior.
         assert_tool_called(
             r,
             expected_name="Grep",
             expected_args_subset={"pattern": "keyword"},
             schema=grep_tool["function"]["parameters"],
             msg="tool_param_names_hyphen_flags",
+        )
+        # (3) The call must actually carry the hyphen-named flags -n and -i
+        #     (line numbers + ignore case) with value True, as instructed by the
+        #     prompt. This proves the hyphen-named keys survived the round-trip
+        #     and remained usable by the model, not just accepted at request time.
+        args = get_tool_calls(r)[0]["arguments_obj"]
+        assert "-n" in args and args["-n"] is True, (
+            f"tool_param_names_hyphen_flags: expected '-n'=True (show line numbers) "
+            f"in tool call arguments, got keys={list(args.keys())} args={args!r}"
+        )
+        assert "-i" in args and args["-i"] is True, (
+            f"tool_param_names_hyphen_flags: expected '-i'=True (case insensitive) "
+            f"in tool call arguments, got keys={list(args.keys())} args={args!r}"
         )
 
     @pytest.mark.parametrize("stream", [False, True], ids=["non_stream", "stream"])
