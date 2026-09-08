@@ -2,7 +2,7 @@
 
 > Source file: `data/m3_api_test/m3_image_tests.py`
 > Naming convention: `test_<2-digit module id>_<2-digit in-module sequence>_<scenario description>`
-> Module count: **13**; case function count: **66**; pytest collected items: **108**
+> Module count: **13**; case function count: **65**; pytest collected items: **110**
 
 ## Module Overview
 
@@ -13,7 +13,7 @@
 | 03 | multi_image | Multi-image stacking / recognition / description | 9 | 13 |
 | 04 | system_multimodal | System message containing image (identity / context injection) | 2 | 4 |
 | 05 | multiturn_multimodal | Multi-turn multimodal dialog (images interleaved) | 1 | 2 |
-| 06 | image_tool_combo | Image + tool_call combination | 1 | 2 |
+| 06 | image_tool_combo | Image + tool_call combination | 3 | 4 |
 | 07 | image_thinking_combo | Image + thinking variant combinations | 4 | 4 |
 | 08 | image_stream_usage | Image + streaming usage chunk | 3 | 4 |
 | 09 | image_param | Image-related params / Usage arithmetic / Error tolerance | 5 | 8 |
@@ -21,7 +21,7 @@
 | 11 | image_size_limit | Single-image size cap / request-body cap / size gradient | 9 | 13 |
 | 12 | image_count_limit | Multi-image count upper bound (spec 1.3.6: ≤20) | 2 | 2 |
 | 13 | base64_compat | Base64 boundary tolerance | 4 | 4 |
-| | **Total** | | **66** | **108** |
+| | **Total** | | **65** | **110** |
 
 ---
 
@@ -114,7 +114,7 @@
 | 10_05 | `test_10_05_tier_high_scale_down[non_stream\|stream]` | 5000×3000 PNG (long side > 2016, triggers scale) | HTTP 200 + prompt_tokens > 0 |
 | 10_06 | `test_10_06_tier_at_boundary` | 4000×2000 PNG (long side > 2016) boundary smoke | HTTP 200 + prompt_tokens > 0 |
 | 10_07 | `test_10_07_detail_default_when_omitted` | Omit detail vs explicit detail="default" comparison | Both HTTP 200 |
-| 10_08 | `test_10_08_max_total_pixels_exceeded` | 4000×4000 solid-red = 16M pixels (> 12,845,056 cap, rule c) | 200 (auto-scale, answer contains "red", prompt_tokens>0) or 400/413/422 (reject) |
+| 10_08 | `test_10_08_max_total_pixels_exceeded` | zn6.jpg real photo 4284×5712 = 24.5M pixels (> 12,845,056 cap, rule c) | 200 (auto-scale, answer contains fish/aquarium/water etc., prompt_tokens>0) or 400/413/422 (reject) |
 | 10_09 | `test_10_09_max_total_pixels_at_boundary` | 3584×3584 = 12,845,056 (= cap, rule c boundary) | HTTP 200 + prompt_tokens > 0 (=cap must accept) |
 | 10_10 | `test_10_10_aspect_ratio_preserved` | 4000×500 (8:1 aspect ratio) acceptance | HTTP 200 + prompt_tokens > 0 |
 | 10_11 | `test_10_11_max_long_side_pixel_tiers[252\|504\|1008]` | mlsp as multiple of 28 (252/504/1008) + 5000×3000 red PNG | HTTP 200 + prompt_tokens > 0 |

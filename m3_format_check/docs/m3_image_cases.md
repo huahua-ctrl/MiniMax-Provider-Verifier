@@ -2,7 +2,7 @@
 
 > 对应文件:`data/m3_api_test/m3_image_tests.py`
 > 命名规范:`test_<模块编号 2 位>_<模块内顺序编号 2 位>_<场景说明>`
-> 模块数:**13**;case 函数数:**66**;pytest 收集 items 数:**108**
+> 模块数:**13**;case 函数数:**65**;pytest 收集 items 数:**110**
 
 ## 模块总览
 
@@ -13,7 +13,7 @@
 | 03 | multi_image | 多图叠加 / 多图识别 / 多图描述 | 9 | 13 |
 | 04 | system_multimodal | system 消息含图(身份/上下文图注入) | 2 | 4 |
 | 05 | multiturn_multimodal | 多轮多模态对话(图穿插) | 1 | 2 |
-| 06 | image_tool_combo | 图 + tool_call 组合 | 1 | 2 |
+| 06 | image_tool_combo | 图 + tool_call 组合 | 3 | 4 |
 | 07 | image_thinking_combo | 图 + thinking 各形态组合 | 4 | 4 |
 | 08 | image_stream_usage | 图 + 流式 usage chunk | 3 | 4 |
 | 09 | image_param | 图相关参数 / Usage 算术 / 异常容错 | 5 | 8 |
@@ -21,7 +21,7 @@
 | 11 | image_size_limit | 单图大小限 / 请求体限 / size 梯度 | 9 | 13 |
 | 12 | image_count_limit | 多图数量上限(spec 1.3.6: ≤20 张) | 2 | 2 |
 | 13 | base64_compat | Base64 边界容错 | 4 | 4 |
-| | **合计** | | **66** | **108** |
+| | **合计** | | **65** | **110** |
 
 ---
 
@@ -114,7 +114,7 @@
 | 10_05 | `test_10_05_tier_high_scale_down[non_stream\|stream]` | 5000×3000 PNG(>2016 长边,触发缩放) | HTTP 200 + prompt_tokens > 0 |
 | 10_06 | `test_10_06_tier_at_boundary` | 4000×2000 PNG(>2016 长边)边界 smoke | HTTP 200 + prompt_tokens > 0 |
 | 10_07 | `test_10_07_detail_default_when_omitted` | 不传 detail / 显式 detail="default" 两次对比 | 两次都 HTTP 200 |
-| 10_08 | `test_10_08_max_total_pixels_exceeded` | 4000×4000 纯红图 = 16M 像素(> 12,845,056 上限,规则 c) | 200(自动缩放且答案含 "red"、prompt_tokens>0)或 400/413/422(拒绝) |
+| 10_08 | `test_10_08_max_total_pixels_exceeded` | zn6.jpg 真图 4284×5712 = 24.5M 像素(> 12,845,056 上限,规则 c) | 200(自动缩放且答案含 fish/aquarium/water 等真图关键词、prompt_tokens>0)或 400/413/422(拒绝) |
 | 10_09 | `test_10_09_max_total_pixels_at_boundary` | 3584×3584 = 12,845,056(=上限,规则 c 边界) | HTTP 200 + prompt_tokens > 0(=上限应接受) |
 | 10_10 | `test_10_10_aspect_ratio_preserved` | 4000×500(宽高比 8:1)接受性 | HTTP 200 + prompt_tokens > 0 |
 | 10_11 | `test_10_11_max_long_side_pixel_tiers[252\|504\|1008]` | mlsp 取 28 倍数(252/504/1008)+ 5000×3000 红 PNG | HTTP 200 + prompt_tokens > 0 |
